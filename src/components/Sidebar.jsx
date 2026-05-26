@@ -1,4 +1,8 @@
-export default function Sidebar({ active, setActive }) {
+export default function Sidebar({
+  active,
+  setActive,
+  permissions,
+}) {
 
   const menu = [
     ["dashboard", "📊", "Dashboard"],
@@ -9,6 +13,7 @@ export default function Sidebar({ active, setActive }) {
     ["orders", "🚚", "Orders"],
     ["reports", "📈", "Reports"],
     ["settings", "⚙️", "Settings"],
+    ["calls", "📞", "Calls"],
   ];
 
   return (
@@ -42,34 +47,52 @@ export default function Sidebar({ active, setActive }) {
           {/* Menu */}
           <div className="mt-10 flex-1 space-y-3 overflow-auto">
 
-            {menu.map((item, index) => (
+            {menu.map((item, index) => {
 
-              <button
-                key={index}
-                onClick={() => setActive(item[0])}
-                className={`w-full rounded-2xl px-5 py-4 flex items-center gap-4 transition-all duration-300 ${
-                  active === item[0]
-                    ? "bg-gradient-to-r from-orange-500 to-red-600 shadow-xl"
-                    : "bg-white/5 hover:bg-white/10"
-                }`}
-              >
+              const allowed =
+                permissions?.[item[0]] ?? true;
 
-                <div className="text-2xl">
-                  {item[1]}
-                </div>
+              if (!allowed) return null;
 
-                <span className="text-lg font-semibold">
-                  {item[2]}
-                </span>
+              return (
 
-              </button>
+                <button
+                  key={index}
+                  onClick={() => setActive(item[0])}
+                  className={`w-full rounded-2xl px-5 py-4 flex items-center gap-4 transition-all duration-300 ${
+                    active === item[0]
+                      ? "bg-gradient-to-r from-orange-500 to-red-600 shadow-xl"
+                      : "bg-white/5 hover:bg-white/10"
+                  }`}
+                >
 
-            ))}
+                  <div className="text-2xl">
+                    {item[1]}
+                  </div>
+
+                  <span className="text-lg font-semibold">
+                    {item[2]}
+                  </span>
+
+                </button>
+
+              );
+
+            })}
 
           </div>
 
           {/* Logout */}
-          <button className="mt-5 h-14 rounded-2xl bg-gradient-to-r from-red-600 to-orange-500 font-bold text-lg hover:scale-[1.02] transition-all">
+          <button
+            onClick={() => {
+
+              localStorage.removeItem("employee_id");
+
+              window.location.reload();
+
+            }}
+            className="mt-5 h-14 rounded-2xl bg-gradient-to-r from-red-600 to-orange-500 font-bold text-lg hover:scale-[1.02] transition-all"
+          >
             Logout
           </button>
 

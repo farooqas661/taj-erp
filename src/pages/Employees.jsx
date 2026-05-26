@@ -1,90 +1,107 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import Topbar from "../components/Topbar";
+
+import { supabase } from "../lib/supabase";
 
 export default function Employees() {
-  const generateEmployeeId = () => {
-    return `EMP${String(employees.length + 1).padStart(3, "0")}`;
-  };
-  const [employees, setEmployees] = useState([
-    {
-      employee_id: "EMP001",
-      full_name: "Admin User",
-      role: "Admin",
-      department: "Management",
-      salary: "50000",
-    },
-  ]);
+
+  const [employees, setEmployees] = useState([]);
+
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
-    employee_id: generateEmployeeId(),
     full_name: "",
     role: "",
     department: "",
     salary: "",
   });
 
-  const addEmployee = () => {
+  // FETCH EMPLOYEES
+  const fetchEmployees = async () => {
+
+    const { data, error } = await supabase
+      .from("employees")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (!error) {
+      setEmployees(data);
+    }
+
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  // ADD EMPLOYEE
+  const addEmployee = async () => {
 
     if (
-      !form.employee_id ||
       !form.full_name ||
       !form.role
     ) {
-      alert("Fill all required fields");
+      alert("Fill required fields");
       return;
     }
 
-    setEmployees([
-      ...employees,
-      form,
-    ]);
+    setLoading(true);
+
+    const employeeId =
+      `EMP${String(employees.length + 1).padStart(3, "0")}`;
+
+    const { error } = await supabase
+      .from("employees")
+      .insert([
+        {
+          employee_id: employeeId,
+          full_name: form.full_name,
+          role: form.role,
+          department: form.department,
+          salary: form.salary,
+        },
+      ]);
+
+    setLoading(false);
+
+    if (error) {
+
+      console.log(error);
+
+      alert("Error adding employee");
+
+      return;
+    }
 
     setForm({
-      employee_id: generateEmployeeId(),
       full_name: "",
       role: "",
       department: "",
       salary: "",
     });
 
+    fetchEmployees();
+
     alert("Employee Added");
+
   };
 
   return (
+
     <div>
 
-      {/* HEADER */}
-      <div className="rounded-[40px] border border-white/10 bg-white/5 backdrop-blur-[40px] p-8">
-
-        <h1 className="text-6xl font-black bg-gradient-to-r from-white via-orange-100 to-orange-300 bg-clip-text text-transparent">
-          Employee Management
-        </h1>
-
-        <p className="mt-4 text-white/50 text-xl">
-          Manage factory employees
-        </p>
-
-      </div>
+      {/* TOPBAR */}
+      <Topbar title="Employees" />
 
       {/* FORM */}
-      <div className="rounded-[40px] border border-white/10 bg-white/5 backdrop-blur-[40px] p-8 mt-8">
+      <div className="rounded-[35px] border border-white/10 bg-white/5 backdrop-blur-3xl p-5 md:p-8 mt-6">
 
-        <h2 className="text-3xl font-bold mb-6">
+        <h2 className="text-2xl md:text-3xl font-bold mb-6">
           Add Employee
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-          <input
-            placeholder="Employee ID"
-            value={form.employee_id}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                employee_id: e.target.value,
-              })
-            }
-            className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <input
             placeholder="Full Name"
@@ -95,7 +112,7 @@ export default function Employees() {
                 full_name: e.target.value,
               })
             }
-            className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none"
+            className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none text-sm md:text-base"
           />
 
           <input
@@ -107,7 +124,7 @@ export default function Employees() {
                 role: e.target.value,
               })
             }
-            className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none"
+            className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none text-sm md:text-base"
           />
 
           <input
@@ -119,7 +136,7 @@ export default function Employees() {
                 department: e.target.value,
               })
             }
-            className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none"
+            className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none text-sm md:text-base"
           />
 
           <input
@@ -131,43 +148,50 @@ export default function Employees() {
                 salary: e.target.value,
               })
             }
-            className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none"
+            className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 outline-none text-sm md:text-base"
           />
 
         </div>
 
         <button
           onClick={addEmployee}
-          className="mt-8 px-10 py-5 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 text-xl font-bold hover:scale-[1.03] transition-all"
+          disabled={loading}
+          className="mt-6 w-full md:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-orange-500 to-red-600 text-base md:text-lg font-bold hover:scale-[1.02] transition-all"
         >
-          Add Employee
+
+          {loading ? "Adding..." : "Add Employee"}
+
         </button>
 
       </div>
 
       {/* EMPLOYEE LIST */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mt-6">
 
         {employees.map((emp, index) => (
 
           <div
             key={index}
-            className="relative overflow-hidden rounded-[35px] border border-white/10 bg-white/5 backdrop-blur-[40px] p-6 hover:scale-[1.03] transition-all duration-300"
+            className="relative overflow-hidden rounded-[30px] border border-white/10 bg-white/5 backdrop-blur-3xl p-5 hover:scale-[1.02] transition-all duration-300"
           >
 
-            <div className="absolute top-[-70px] right-[-70px] w-[180px] h-[180px] rounded-full bg-orange-500/20 blur-[100px]"></div>
+            {/* Glow */}
+            <div className="absolute top-[-50px] right-[-50px] w-[150px] h-[150px] bg-orange-500/20 blur-[120px] rounded-full"></div>
 
             <div className="relative z-10">
 
-              <div className="w-20 h-20 rounded-[25px] bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-4xl shadow-2xl">
+              {/* Avatar */}
+              <div className="w-16 h-16 rounded-[20px] bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-3xl shadow-2xl">
                 👤
               </div>
 
-              <h1 className="mt-6 text-3xl font-black">
+              {/* Name */}
+              <h1 className="mt-5 text-2xl md:text-3xl font-black break-words">
                 {emp.full_name}
               </h1>
 
-              <div className="mt-5 space-y-3 text-white/60">
+              {/* Details */}
+              <div className="mt-5 space-y-2 text-white/60 text-sm md:text-base">
 
                 <p>ID : {emp.employee_id}</p>
 
@@ -188,5 +212,6 @@ export default function Employees() {
       </div>
 
     </div>
+
   );
 }

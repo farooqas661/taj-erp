@@ -1,15 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Sidebar from "./components/Sidebar";
 
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
+import Permissions from "./pages/Permissions";
+
+import { supabase } from "./lib/supabase";
 
 export default function App() {
 
   const [active, setActive] = useState("dashboard");
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [permissions, setPermissions] = useState({});
+
+  // DEMO EMPLOYEE
+  const employeeId = "EMP001";
+
+  // FETCH PERMISSIONS
+  const fetchPermissions = async () => {
+
+    const { data, error } = await supabase
+      .from("employee_permissions")
+      .select("*")
+      .eq("employee_id", employeeId)
+      .single();
+
+    if (!error && data) {
+      setPermissions(data);
+    }
+
+  };
+
+  useEffect(() => {
+    fetchPermissions();
+  }, []);
 
   return (
 
@@ -18,15 +46,15 @@ export default function App() {
       {/* BACKGROUND */}
       <div className="absolute inset-0 overflow-hidden">
 
-        <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-orange-500/20 blur-3xl rounded-full"></div>
+        <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-orange-500/20 blur-[140px] rounded-full"></div>
 
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-red-600/20 blur-3xl rounded-full"></div>
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-red-600/20 blur-[140px] rounded-full"></div>
 
       </div>
 
       <div className="relative z-10 flex min-h-screen">
 
-        {/* MOBILE SIDEBAR OVERLAY */}
+        {/* MOBILE OVERLAY */}
         {sidebarOpen && (
 
           <div
@@ -51,6 +79,7 @@ export default function App() {
               setActive(value);
               setSidebarOpen(false);
             }}
+            permissions={permissions}
           />
 
         </div>
@@ -74,28 +103,44 @@ export default function App() {
 
           </div>
 
-          {active === "dashboard" && <Dashboard />}
+          {/* PAGES */}
 
-          {active === "employees" && <Employees />}
+          {active === "dashboard" && (
+            <Dashboard />
+          )}
 
-          {active === "attendance" && <Attendance />}
+          {active === "employees" &&
+            permissions.employees && (
+              <Employees />
+          )}
 
-          {active !== "dashboard" &&
-            active !== "employees" &&
-            active !== "attendance" && (
+          {active === "attendance" &&
+            permissions.attendance && (
+              <Attendance />
+          )}
 
-            <div className="rounded-[40px] border border-white/10 bg-white/5 backdrop-blur-xl p-10">
+          {active === "salary" && (
+            <Permissions />
+          )}
 
-              <h1 className="text-4xl lg:text-5xl font-black">
-                {active.toUpperCase()}
-              </h1>
+          {active === "stock" && (
+            <Permissions />
+          )}
 
-              <p className="mt-5 text-white/50 text-lg lg:text-xl">
-                Coming soon...
-              </p>
+          {active === "orders" && (
+            <Permissions />
+          )}
 
-            </div>
+          {active === "reports" && (
+            <Permissions />
+          )}
 
+          {active === "settings" && (
+            <Permissions />
+          )}
+
+          {active === "calls" && (
+            <Permissions />
           )}
 
         </div>
