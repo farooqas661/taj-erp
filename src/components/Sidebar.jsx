@@ -12,12 +12,13 @@ export default function Sidebar({ active, setActive }) {
   ];
 
   return (
-    <div className="w-[300px] p-5">
 
-      <div className="h-full rounded-[40px] border border-white/10 bg-white/5 backdrop-blur-[40px] overflow-hidden relative shadow-2xl">
+    <div className="w-full lg:w-[300px] p-3 lg:p-5">
+
+      <div className="min-h-[250px] rounded-[40px] border border-white/10 bg-white/5 backdrop-blur-xl overflow-hidden relative shadow-2xl">
 
         {/* Glow */}
-        <div className="absolute top-[-100px] left-[-50px] w-[250px] h-[250px] bg-orange-500/20 blur-[100px] rounded-full"></div>
+        <div className="absolute -top-24 -left-12 w-64 h-64 bg-orange-500/20 blur-3xl rounded-full"></div>
 
         <div className="relative z-10 p-6 flex flex-col h-full">
 
@@ -28,7 +29,7 @@ export default function Sidebar({ active, setActive }) {
               TAJ
             </div>
 
-            <h1 className="mt-6 text-4xl font-black bg-gradient-to-r from-orange-300 to-yellow-200 bg-clip-text text-transparent">
+            <h1 className="mt-6 text-3xl lg:text-4xl font-black bg-gradient-to-r from-orange-300 to-yellow-200 bg-clip-text text-transparent">
               TAJ ERP
             </h1>
 
@@ -39,7 +40,7 @@ export default function Sidebar({ active, setActive }) {
           </div>
 
           {/* Menu */}
-          <div className="mt-10 flex-1 space-y-4">
+          <div className="mt-10 flex-1 space-y-3 overflow-auto">
 
             {menu.map((item, index) => (
 
@@ -77,5 +78,6 @@ export default function Sidebar({ active, setActive }) {
       </div>
 
     </div>
+
   );
 }
