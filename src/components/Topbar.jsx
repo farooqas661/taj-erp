@@ -1,69 +1,127 @@
-export default function Topbar({ title = "Dashboard" }) {
+import { useEffect, useState } from "react";
 
-    return (
-  
-      <div className="rounded-[30px] border border-white/10 bg-white/5 backdrop-blur-3xl p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 overflow-hidden relative">
-  
-        {/* Glow */}
-        <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-orange-500/20 blur-[120px] rounded-full"></div>
-  
+import { supabase } from "../lib/supabase";
+
+export default function Topbar({ title }) {
+
+  const employeeId =
+    localStorage.getItem("employee_id");
+
+  const [employee, setEmployee] = useState(null);
+
+  // FETCH EMPLOYEE
+  const fetchEmployee = async () => {
+
+    const { data, error } = await supabase
+      .from("employees")
+      .select("*")
+      .eq("employee_id", employeeId)
+      .single();
+
+    if (!error && data) {
+
+      setEmployee(data);
+
+    }
+
+  };
+
+  useEffect(() => {
+
+    fetchEmployee();
+
+  }, []);
+
+  return (
+
+    <div className="rounded-[35px] border border-white/10 bg-white/5 backdrop-blur-3xl p-5 md:p-7 relative overflow-hidden">
+
+      {/* BG GLOW */}
+      <div className="absolute top-[-120px] left-[-120px] w-[280px] h-[280px] bg-orange-500/20 blur-[140px] rounded-full"></div>
+
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+
         {/* LEFT */}
-        <div className="relative z-10">
-  
-          <h1 className="text-3xl md:text-5xl font-black bg-gradient-to-r from-white via-orange-100 to-orange-300 bg-clip-text text-transparent">
+        <div>
+
+          <h1 className="text-4xl lg:text-5xl font-black bg-gradient-to-r from-white via-orange-100 to-orange-300 bg-clip-text text-transparent">
             {title}
           </h1>
-  
-          <p className="mt-2 text-white/50 text-sm md:text-base">
+
+          <p className="mt-3 text-white/40 text-lg">
             Welcome back to TAJ ERP
           </p>
-  
+
         </div>
-  
+
         {/* RIGHT */}
-        <div className="relative z-10 flex items-center gap-3 flex-wrap">
-  
-          {/* Search */}
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+
+          {/* SEARCH */}
           <input
             type="text"
             placeholder="Search..."
-            className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none text-sm w-full md:w-[220px]"
+            className="bg-white/5 border border-white/10 rounded-2xl px-5 py-4 outline-none w-full md:w-[260px]"
           />
-  
-          {/* Notification */}
-          <button className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl hover:bg-white/10 transition-all">
+
+          {/* NOTIFICATION */}
+          <button className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl">
             🔔
           </button>
-  
-          {/* Online */}
-          <div className="px-4 py-3 rounded-2xl bg-green-500/20 border border-green-500/20 text-green-300 text-sm font-semibold">
+
+          {/* STATUS */}
+          <div className="px-6 h-16 rounded-2xl bg-green-500/20 border border-green-500/20 flex items-center justify-center text-green-300 font-bold">
             Online
           </div>
-  
-          {/* Profile */}
-          <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/5 border border-white/10">
-  
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-xl font-bold">
-              A
-            </div>
-  
+
+          {/* PROFILE */}
+          <div className="flex items-center gap-4 rounded-2xl bg-white/5 border border-white/10 px-4 py-3">
+
+            {/* PHOTO */}
+            {employee?.profile_photo ? (
+
+              <img
+                src={employee.profile_photo}
+                alt="Profile"
+                className="w-16 h-16 rounded-2xl object-cover border border-white/10"
+              />
+
+            ) : (
+
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-3xl font-black">
+
+                {employee?.full_name
+                  ? employee.full_name.charAt(0)
+                  : "U"}
+
+              </div>
+
+            )}
+
+            {/* INFO */}
             <div>
-  
-              <h1 className="font-bold text-sm md:text-base">
-                Admin
+
+              <h1 className="text-2xl font-black">
+
+                {employee?.full_name || "User"}
+
               </h1>
-  
-              <p className="text-white/40 text-xs md:text-sm">
-                Super Admin
+
+              <p className="text-white/40">
+
+                {employee?.role || "Employee"}
+
               </p>
-  
+
             </div>
-  
+
           </div>
-  
+
         </div>
-  
+
       </div>
-  
-    );
-  }
+
+    </div>
+
+  );
+}

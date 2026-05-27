@@ -3,41 +3,121 @@ import { useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
 
 import Dashboard from "./pages/Dashboard";
+import WorkerDashboard from "./pages/WorkerDashboard";
+
 import Employees from "./pages/Employees";
+
 import Attendance from "./pages/Attendance";
-import Permissions from "./pages/Permissions";
+import AdminAttendance from "./pages/AdminAttendance";
+
+import Tasks from "./pages/Tasks";
+
+import Salary from "./pages/Salary";
+import Stock from "./pages/Stock";
+import Orders from "./pages/Orders";
+import Reports from "./pages/Reports";
+import Calls from "./pages/Calls";
+import Settings from "./pages/Settings";
+
+import Login from "./pages/Login";
 
 import { supabase } from "./lib/supabase";
 
 export default function App() {
 
-  const [active, setActive] = useState("dashboard");
+  const [active, setActive] =
+    useState("dashboard");
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
 
-  const [permissions, setPermissions] = useState({});
+  const [permissions, setPermissions] =
+    useState({});
 
-  // DEMO EMPLOYEE
-  const employeeId = "EMP001";
+  const [employee, setEmployee] =
+    useState(null);
+
+  const [employeeId, setEmployeeId] =
+    useState(
+      localStorage.getItem(
+        "employee_id"
+      ) || ""
+    );
+
+  // LOGIN
+  const handleLogin = (id) => {
+
+    localStorage.setItem(
+      "employee_id",
+      id
+    );
+
+    setEmployeeId(id);
+
+  };
+
+  // FETCH EMPLOYEE
+  const fetchEmployee = async () => {
+
+    if (!employeeId) return;
+
+    const { data, error } =
+      await supabase
+        .from("employees")
+        .select("*")
+        .eq(
+          "employee_id",
+          employeeId
+        )
+        .single();
+
+    if (!error && data) {
+
+      setEmployee(data);
+
+    }
+
+  };
 
   // FETCH PERMISSIONS
   const fetchPermissions = async () => {
 
-    const { data, error } = await supabase
-      .from("employee_permissions")
-      .select("*")
-      .eq("employee_id", employeeId)
-      .single();
+    if (!employeeId) return;
+
+    const { data, error } =
+      await supabase
+        .from("employee_permissions")
+        .select("*")
+        .eq(
+          "employee_id",
+          employeeId
+        )
+        .single();
 
     if (!error && data) {
+
       setPermissions(data);
+
     }
 
   };
 
   useEffect(() => {
+
+    fetchEmployee();
+
     fetchPermissions();
-  }, []);
+
+  }, [employeeId]);
+
+  // NOT LOGGED IN
+  if (!employeeId) {
+
+    return (
+      <Login onLogin={handleLogin} />
+    );
+
+  }
 
   return (
 
@@ -59,7 +139,9 @@ export default function App() {
 
           <div
             className="fixed inset-0 bg-black/70 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
+            onClick={() =>
+              setSidebarOpen(false)
+            }
           ></div>
 
         )}
@@ -69,15 +151,20 @@ export default function App() {
           fixed lg:relative z-50 lg:z-10
           h-full lg:h-auto
           transition-all duration-300
-          ${sidebarOpen ? "left-0" : "-left-full"}
+          ${sidebarOpen
+            ? "left-0"
+            : "-left-full"}
           lg:left-0
         `}>
 
           <Sidebar
             active={active}
             setActive={(value) => {
+
               setActive(value);
+
               setSidebarOpen(false);
+
             }}
             permissions={permissions}
           />
@@ -91,56 +178,95 @@ export default function App() {
           <div className="lg:hidden flex items-center justify-between mb-5 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
 
             <button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() =>
+                setSidebarOpen(true)
+              }
               className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-2xl"
             >
               ☰
             </button>
 
             <h1 className="text-2xl font-black bg-gradient-to-r from-orange-300 to-yellow-200 bg-clip-text text-transparent">
+
               TAJ ERP
+
             </h1>
 
           </div>
 
-          {/* PAGES */}
-
+          {/* DASHBOARD */}
           {active === "dashboard" && (
-            <Dashboard />
+
+            employee?.role
+              ?.trim()
+              .toLowerCase() === "worker"
+
+              ? <WorkerDashboard />
+
+              : <Dashboard />
+
           )}
 
+          {/* EMPLOYEES */}
           {active === "employees" &&
             permissions.employees && (
               <Employees />
           )}
 
+          {/* ATTENDANCE */}
           {active === "attendance" &&
             permissions.attendance && (
-              <Attendance />
+
+              employee?.role
+                ?.trim()
+                .toLowerCase() === "worker"
+
+                ? <Attendance />
+
+                : <AdminAttendance />
+
           )}
 
-          {active === "salary" && (
-            <Permissions />
+          {/* TASKS */}
+          {active === "tasks" &&
+            permissions.attendance && (
+              <Tasks />
           )}
 
-          {active === "stock" && (
-            <Permissions />
+          {/* SALARY */}
+          {active === "salary" &&
+            permissions.salary && (
+              <Salary />
           )}
 
-          {active === "orders" && (
-            <Permissions />
+          {/* STOCK */}
+          {active === "stock" &&
+            permissions.stock && (
+              <Stock />
           )}
 
-          {active === "reports" && (
-            <Permissions />
+          {/* ORDERS */}
+          {active === "orders" &&
+            permissions.orders && (
+              <Orders />
           )}
 
-          {active === "settings" && (
-            <Permissions />
+          {/* REPORTS */}
+          {active === "reports" &&
+            permissions.reports && (
+              <Reports />
           )}
 
-          {active === "calls" && (
-            <Permissions />
+          {/* SETTINGS */}
+          {active === "settings" &&
+            permissions.settings && (
+              <Settings />
+          )}
+
+          {/* CALLS */}
+          {active === "calls" &&
+            permissions.calls && (
+              <Calls />
           )}
 
         </div>
