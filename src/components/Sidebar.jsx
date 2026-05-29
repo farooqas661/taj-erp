@@ -78,6 +78,13 @@ export default function Sidebar({
     },
 
     {
+      id: "approvals",
+      label: "Approvals",
+      icon: "✅",
+      permission: "employees",
+    },
+
+    {
       id: "settings",
       label: "Settings",
       icon: "⚙️",

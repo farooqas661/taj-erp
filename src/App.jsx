@@ -1,3 +1,4 @@
+import Approvals from "./pages/Approvals";
 import { useEffect, useState } from "react";
 
 import Sidebar from "./components/Sidebar";
@@ -212,6 +213,12 @@ export default function App() {
             permissions.employees && (
               <Employees />
           )}
+
+          {/* APPROVALS */}
+{active === "approvals" &&
+  permissions.employees && (
+    <Approvals />
+)}
 
           {/* ATTENDANCE */}
           {active === "attendance" &&
