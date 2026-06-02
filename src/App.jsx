@@ -1,3 +1,4 @@
+import Stock from "./pages/Stock";
 import Approvals from "./pages/Approvals";
 import { useEffect, useState } from "react";
 
@@ -14,7 +15,6 @@ import AdminAttendance from "./pages/AdminAttendance";
 import Tasks from "./pages/Tasks";
 
 import Salary from "./pages/Salary";
-import Stock from "./pages/Stock";
 import Orders from "./pages/Orders";
 import Reports from "./pages/Reports";
 import Calls from "./pages/Calls";
