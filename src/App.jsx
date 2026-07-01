@@ -19,6 +19,7 @@ import Orders from "./pages/Orders";
 import Reports from "./pages/Reports";
 import Calls from "./pages/Calls";
 import Settings from "./pages/Settings";
+import Wallet from "./pages/Wallet";
 
 import Login from "./pages/Login";
 
@@ -168,6 +169,7 @@ export default function App() {
 
             }}
             permissions={permissions}
+            employee={employee}
           />
 
         </div>
@@ -268,6 +270,15 @@ export default function App() {
           {active === "settings" &&
             permissions.settings && (
               <Settings />
+          )}
+
+          {/* WALLET */}
+          {active === "wallet" &&
+            (permissions.wallet ||
+              ["admin", "manager", "accountant"].includes(
+                employee?.role?.trim().toLowerCase() || ""
+              )) && (
+              <Wallet />
           )}
 
           {/* CALLS */}

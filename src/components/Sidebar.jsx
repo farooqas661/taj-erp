@@ -2,10 +2,15 @@ export default function Sidebar({
   active,
   setActive,
   permissions,
+  employee,
 }) {
 
-  const employeeId =
-    localStorage.getItem("employee_id");
+  const role =
+    employee?.role?.trim().toLowerCase() || "";
+
+  const canAccessWallet =
+    permissions?.wallet ||
+    ["admin", "manager", "accountant"].includes(role);
 
   // LOGOUT
   const handleLogout = () => {
@@ -92,8 +97,15 @@ export default function Sidebar({
     },
 
     {
+      id: "wallet",
+      label: "Wallet / UPI",
+      icon: "💳",
+      permission: "wallet",
+    },
+
+    {
       id: "calls",
-      label: "Calls",
+      label: "Staff Calls",
       icon: "📞",
       permission: "calls",
     },
@@ -130,14 +142,13 @@ export default function Sidebar({
 
         {menuItems.map((item, index) => {
 
-          // CHECK PERMISSION
-          if (
+          if (item.id === "wallet") {
+            if (!canAccessWallet) return null;
+          } else if (
             item.permission &&
             !permissions?.[item.permission]
           ) {
-
             return null;
-
           }
 
           return (

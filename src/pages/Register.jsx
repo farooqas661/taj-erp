@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export default function Register() {
+export default function Register({ onBack }) {
 
   const [loading, setLoading] = useState(false);
 
@@ -92,8 +92,6 @@ export default function Register() {
     
     if (error) {
     
-      console.log(error);
-    
       alert(error.message);
     
       setLoading(false);
@@ -131,6 +129,16 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center p-5">
 
       <div className="w-full max-w-3xl rounded-[35px] border border-white/10 bg-white/5 backdrop-blur-3xl p-8">
+
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="mb-6 px-5 py-2 rounded-2xl border border-white/10 bg-white/5 font-bold hover:bg-white/10"
+          >
+            ← Back to Login
+          </button>
+        )}
 
         <h1 className="text-5xl font-black mb-8">
           Employee Registration

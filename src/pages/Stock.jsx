@@ -32,10 +32,10 @@ export default function Stock() {
       .insert([
         {
           item_name: itemName,
-          category: category,
+          category,
           quantity: Number(quantity),
-          unit: unit,
-          supplier: supplier,
+          unit,
+          supplier,
         },
       ]);
 
@@ -56,49 +56,141 @@ export default function Stock() {
     fetchStock();
   };
 
+  const receiveStock = async (item) => {
+    const qty = prompt("Enter quantity received");
+
+    if (!qty) return;
+
+    await supabase
+      .from("stock")
+      .update({
+        quantity: Number(item.quantity) + Number(qty),
+      })
+      .eq("id", item.id);
+
+    fetchStock();
+  };
+
+  const updateMaterial = async (id) => {
+    const rating = prompt("Rating (1-5)");
+    const quality = prompt("Quality");
+    const water = prompt("Water Required");
+    const salt = prompt("Salt Required");
+    const notes = prompt("Mixing Notes");
+    const feedback = prompt("Feedback");
+    const testedBy = prompt("Tested By");
+
+    const { error } = await supabase
+      .from("stock")
+      .update({
+        rating,
+        quality,
+        water_required: water,
+        salt_required: salt,
+        mixing_notes: notes,
+        feedback,
+        tested_by: testedBy,
+        status: "tested",
+      })
+      .eq("id", id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Material Rating Saved");
+    fetchStock();
+  };
+
+  const issueStock = async (item) => {
+    const qty = prompt("Enter quantity issued");
+
+    if (!qty) return;
+
+    const newQty =
+      Number(item.quantity) - Number(qty);
+
+    if (newQty < 0) {
+      alert("Not enough stock");
+      return;
+    }
+
+    await supabase
+      .from("stock")
+      .update({
+        quantity: newQty,
+      })
+      .eq("id", item.id);
+
+    fetchStock();
+  };
+
   return (
     <div>
       <Topbar title="Stock Management" />
 
       <div className="mt-6 rounded-[35px] border border-white/10 bg-white/5 p-8">
 
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-4xl font-black">
-            Raw Materials
-          </h1>
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+  <h1 className="text-4xl font-black">
+    Raw Materials
+  </h1>
 
-          <div className="flex gap-3 flex-wrap">
+  <div className="flex gap-3 flex-wrap">
 
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="px-5 py-3 rounded-2xl bg-green-600 font-bold"
-            >
-              + Add Material
-            </button>
+    <button
+      onClick={() => setShowForm(!showForm)}
+      className="px-5 py-3 rounded-2xl bg-green-600 font-bold"
+    >
+      + Add Material
+    </button>
 
-            <button
-              onClick={() => alert("Receive Stock - Coming Soon")}
-              className="px-5 py-3 rounded-2xl bg-blue-600 font-bold"
-            >
-              + Receive Stock
-            </button>
+    <button
+      onClick={() => {
+        const total = items.reduce(
+          (sum, item) => sum + Number(item.quantity || 0),
+          0
+        );
+        alert("Total Stock: " + total);
+      }}
+      className="px-5 py-3 rounded-2xl bg-blue-600 font-bold"
+    >
+      Total Stock
+    </button>
 
-            <button
-              onClick={() => alert("Issue Material - Coming Soon")}
-              className="px-5 py-3 rounded-2xl bg-orange-600 font-bold"
-            >
-              Issue Material
-            </button>
+    <button
+      onClick={() => {
+        const lowItems = items.filter(
+          (item) =>
+            Number(item.quantity) <=
+            Number(item.minimum_stock || 10)
+        );
 
-            <button
-              onClick={() => alert("Low Stock - Coming Soon")}
-              className="px-5 py-3 rounded-2xl bg-red-600 font-bold"
-            >
-              Low Stock
-            </button>
+        if (lowItems.length === 0) {
+          alert("No low stock items");
+          return;
+        }
 
-          </div>
-        </div>
+        alert(
+          lowItems
+            .map(
+              (i) =>
+                i.item_name +
+                " (" +
+                i.quantity +
+                ")"
+            )
+            .join("\n")
+        );
+      }}
+      className="px-5 py-3 rounded-2xl bg-red-600 font-bold"
+    >
+      Low Stock
+    </button>F
+
+  </div>
+</div>
 
         {showForm && (
           <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -108,35 +200,45 @@ export default function Stock() {
               <input
                 placeholder="Material Name"
                 value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
+                onChange={(e) =>
+                  setItemName(e.target.value)
+                }
                 className="bg-black/30 p-3 rounded-xl"
               />
 
               <input
                 placeholder="Category"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) =>
+                  setCategory(e.target.value)
+                }
                 className="bg-black/30 p-3 rounded-xl"
               />
 
               <input
                 placeholder="Quantity"
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={(e) =>
+                  setQuantity(e.target.value)
+                }
                 className="bg-black/30 p-3 rounded-xl"
               />
 
               <input
                 placeholder="Unit"
                 value={unit}
-                onChange={(e) => setUnit(e.target.value)}
+                onChange={(e) =>
+                  setUnit(e.target.value)
+                }
                 className="bg-black/30 p-3 rounded-xl"
               />
 
               <input
                 placeholder="Supplier"
                 value={supplier}
-                onChange={(e) => setSupplier(e.target.value)}
+                onChange={(e) =>
+                  setSupplier(e.target.value)
+                }
                 className="bg-black/30 p-3 rounded-xl"
               />
 
@@ -170,10 +272,64 @@ export default function Stock() {
               <p className="text-white/60">
                 Quantity: {item.quantity} {item.unit}
               </p>
+              <p className="text-white/60">
+  ⭐ Rating: {item.rating || "Not Rated"}
+</p>
+
+<p className="text-white/60">
+  Quality: {item.quality || "-"}
+</p>
+
+<p className="text-white/60">
+  Water Required: {item.water_required || "-"}
+</p>
+
+<p className="text-white/60">
+  Salt Required: {item.salt_required || "-"}
+</p>
+
+<p className="text-white/60">
+  Tested By: {item.tested_by || "-"}
+</p>
+
+<p className="text-white/60">
+  Feedback: {item.feedback || "-"}
+</p>
 
               <p className="text-white/60">
                 Supplier: {item.supplier}
               </p>
+
+              <div className="flex gap-2 mt-4">
+
+                <button
+                  onClick={() =>
+                    receiveStock(item)
+                  }
+                  className="px-4 py-2 rounded-xl bg-green-600 font-bold"
+                >
+                  + Receive
+                </button>
+
+                <button
+                  onClick={() =>
+                    issueStock(item)
+                  }
+                  className="px-4 py-2 rounded-xl bg-red-600 font-bold"
+                >
+                  - Issue
+                </button>
+
+                <button
+                  onClick={() =>
+                    updateMaterial(item.id)
+                  }
+                  className="px-4 py-2 rounded-xl bg-yellow-600 font-bold"
+                >
+                  ⭐ Rate Material
+                </button>
+
+              </div>
 
             </div>
           ))}

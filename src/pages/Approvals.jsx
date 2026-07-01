@@ -43,8 +43,7 @@ const approveEmployee = async (employee) => {
     .eq("id", employee.id);
 
   if (error) {
-    console.log("APPROVE ERROR:", error);
-    alert(JSON.stringify(error));
+    alert("Approve failed: " + error.message);
     return;
   }
 
@@ -62,11 +61,12 @@ const approveEmployee = async (employee) => {
         reports: false,
         settings: false,
         calls: false,
+        wallet: false,
       },
     ]);
 
   if (permError) {
-    console.log("PERMISSION ERROR:", permError);
+    alert("Permission setup failed: " + permError.message);
   }
 
   alert(newEmployeeId + " approved");

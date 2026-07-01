@@ -54,6 +54,7 @@ export default function Permissions() {
     "reports",
     "settings",
     "calls",
+    "wallet",
   ];
 
   return (

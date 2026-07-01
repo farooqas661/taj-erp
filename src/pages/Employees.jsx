@@ -109,6 +109,7 @@ export default function Employees() {
             reports: false,
             settings: false,
             calls: false,
+            wallet: false,
           },
         ]);
 

@@ -21,6 +21,8 @@ export default function Attendance() {
 
   const canvasRef = useRef(null);
 
+  const streamRef = useRef(null);
+
   // FETCH ATTENDANCE
   const fetchAttendance = async () => {
 
@@ -36,14 +38,6 @@ export default function Attendance() {
 
   };
 
-  useEffect(() => {
-
-    fetchAttendance();
-
-    startCamera();
-
-  }, []);
-
   // START CAMERA
   const startCamera = async () => {
 
@@ -56,19 +50,35 @@ export default function Attendance() {
 
       setStream(mediaStream);
 
+      streamRef.current = mediaStream;
+
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
 
-    } catch (error) {
-
-      console.log(error);
+    } catch {
 
       alert("Camera access denied");
 
     }
 
   };
+
+  useEffect(() => {
+
+    fetchAttendance();
+
+    void startCamera();
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) =>
+          track.stop()
+        );
+      }
+    };
+
+  }, []);
 
   // TAKE PHOTO
   const capturePhoto = () => {
@@ -156,10 +166,9 @@ export default function Attendance() {
 
       location = await getLocation();
 
-    } catch (error) {
+    } catch {
 
-      console.log(error);
-
+      // location optional for check-in
     }
 
     await supabase

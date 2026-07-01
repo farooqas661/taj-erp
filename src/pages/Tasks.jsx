@@ -21,6 +21,11 @@ export default function Tasks() {
   const [loading, setLoading] =
     useState(false);
 
+  const isWorker =
+    employee?.role
+      ?.trim()
+      .toLowerCase() === "worker";
+
   // FORM
   const [form, setForm] = useState({
     title: "",
@@ -67,9 +72,7 @@ export default function Tasks() {
       .order("id", { ascending: false });
 
     // WORKER ONLY SEES OWN TASKS
-    if (
-      employee?.role === "worker"
-    ) {
+    if (isWorker) {
 
       query = query.eq(
         "assigned_to",
@@ -182,7 +185,7 @@ export default function Tasks() {
       <Topbar title="Tasks" />
 
       {/* ADMIN CREATE TASK */}
-      {employee?.role !== "worker" && (
+      {!isWorker && (
 
         <div className="mt-6 rounded-[35px] border border-white/10 bg-white/5 backdrop-blur-3xl p-6 md:p-8">
 
@@ -364,7 +367,7 @@ export default function Tasks() {
                 </div>
 
                 {/* ACTIONS */}
-                {employee?.role === "worker" && (
+                {isWorker && (
 
                   <div className="flex gap-3 mt-6">
 

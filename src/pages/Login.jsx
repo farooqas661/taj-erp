@@ -39,7 +39,7 @@ export default function Login({ onLogin }) {
   };
 
   if (showRegister) {
-    return <Register />;
+    return <Register onBack={() => setShowRegister(false)} />;
   }
 
   return (
