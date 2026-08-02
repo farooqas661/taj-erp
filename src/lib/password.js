@@ -25,10 +25,9 @@ export const verifyPassword = async (
   const plain = String(plainPassword);
   const stored = String(storedPassword);
 
-  if (isHashedPassword(stored)) {
-    return bcrypt.compare(plain, stored);
+  if (!isHashedPassword(stored)) {
+    return false;
   }
 
-  // Temporary support for unmigrated plain-text passwords
-  return plain === stored;
+  return bcrypt.compare(plain, stored);
 };
