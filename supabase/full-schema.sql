@@ -216,8 +216,9 @@ create table if not exists wallet_transactions (
 );
 
 -- ============================================================
--- ROW LEVEL SECURITY (open for development)
--- Tighten these policies before going to production!
+-- ROW LEVEL SECURITY
+-- Open policies below are for first-time bootstrap only.
+-- Immediately run supabase/secure-rls.sql after setup for production.
 -- ============================================================
 
 alter table employees enable row level security;
@@ -233,6 +234,19 @@ alter table wallets enable row level security;
 alter table shopkeepers enable row level security;
 alter table wallet_transactions enable row level security;
 
+drop policy if exists "employees_all" on employees;
+drop policy if exists "employee_permissions_all" on employee_permissions;
+drop policy if exists "attendance_all" on attendance;
+drop policy if exists "tasks_all" on tasks;
+drop policy if exists "stock_all" on stock;
+drop policy if exists "salary_payments_all" on salary_payments;
+drop policy if exists "orders_all" on orders;
+drop policy if exists "app_settings_all" on app_settings;
+drop policy if exists "calls_all" on calls;
+drop policy if exists "wallets_all" on wallets;
+drop policy if exists "shopkeepers_all" on shopkeepers;
+drop policy if exists "wallet_transactions_all" on wallet_transactions;
+
 create policy "employees_all" on employees for all using (true) with check (true);
 create policy "employee_permissions_all" on employee_permissions for all using (true) with check (true);
 create policy "attendance_all" on attendance for all using (true) with check (true);
@@ -245,6 +259,10 @@ create policy "calls_all" on calls for all using (true) with check (true);
 create policy "wallets_all" on wallets for all using (true) with check (true);
 create policy "shopkeepers_all" on shopkeepers for all using (true) with check (true);
 create policy "wallet_transactions_all" on wallet_transactions for all using (true) with check (true);
+
+-- IMPORTANT: After this file succeeds, run:
+--   supabase/secure-rls.sql
+-- to replace open policies with session + permission aware RLS.
 
 -- ============================================================
 -- STORAGE BUCKET (employee registration selfies)
