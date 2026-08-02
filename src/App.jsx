@@ -1,6 +1,8 @@
 import Stock from "./pages/Stock";
 import Approvals from "./pages/Approvals";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { App as CapApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 import Sidebar from "./components/Sidebar";
 
@@ -54,6 +56,55 @@ export default function App() {
         EMPLOYEE_ID_KEY
       ) || ""
     );
+
+  const activeRef = useRef(active);
+  const sidebarOpenRef = useRef(sidebarOpen);
+  const employeeIdRef = useRef(employeeId);
+
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
+  useEffect(() => {
+    sidebarOpenRef.current = sidebarOpen;
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    employeeIdRef.current = employeeId;
+  }, [employeeId]);
+
+  // Android hardware back: navigate in-app instead of closing the activity
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return undefined;
+    }
+
+    const listenerPromise = CapApp.addListener(
+      "backButton",
+      () => {
+        if (sidebarOpenRef.current) {
+          setSidebarOpen(false);
+          return;
+        }
+
+        if (!employeeIdRef.current) {
+          CapApp.exitApp();
+          return;
+        }
+
+        if (activeRef.current !== "dashboard") {
+          setActive("dashboard");
+          return;
+        }
+
+        CapApp.exitApp();
+      }
+    );
+
+    return () => {
+      void listenerPromise.then((handle) => handle.remove());
+    };
+  }, []);
 
   // LOGIN
   const handleLogin = (id) => {
