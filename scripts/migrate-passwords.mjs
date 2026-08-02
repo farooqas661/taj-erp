@@ -4,8 +4,11 @@
  * Usage:
  *   npm run migrate:passwords
  *
- * Requires VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env
- * (same values the app uses). Existing login credentials are preserved.
+ * After secure RLS is applied, set SUPABASE_SERVICE_ROLE_KEY in .env
+ * (Dashboard → Settings → API → service_role). Never expose that key
+ * in the frontend.
+ *
+ * Falls back to VITE_SUPABASE_ANON_KEY only for pre-RLS databases.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -23,13 +26,21 @@ const isHashedPassword = (value) =>
   typeof value === "string" && /^\$2[aby]\$/.test(value);
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error(
-    "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env"
+    "Missing VITE_SUPABASE_URL and a key (SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY) in .env"
   );
   process.exit(1);
+}
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn(
+    "WARNING: Using anon key. After secure-rls.sql is applied, set SUPABASE_SERVICE_ROLE_KEY."
+  );
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -58,14 +69,30 @@ const migratePasswords = async () => {
   for (const employee of employees) {
     const stored = employee.password;
 
-    if (!stored) {
-      console.log(`SKIP  ${employee.employee_id} (no password)`);
+    if (!stored || stored === "REDACTED") {
+      console.log(
+        `SKIP  ${employee.employee_id} (no migratable password on employees row)`
+      );
       skipped += 1;
       continue;
     }
 
     if (isHashedPassword(stored)) {
-      console.log(`SKIP  ${employee.employee_id} (already hashed)`);
+      // Writing the hash again syncs it into employee_secrets via trigger
+      const { error: syncError } = await supabase
+        .from("employees")
+        .update({ password: stored })
+        .eq("id", employee.id);
+
+      if (syncError) {
+        console.error(
+          `FAIL  ${employee.employee_id}: ${syncError.message}`
+        );
+        failed += 1;
+        continue;
+      }
+
+      console.log(`SYNC  ${employee.employee_id} (already hashed)`);
       skipped += 1;
       continue;
     }
