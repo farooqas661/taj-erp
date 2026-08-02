@@ -12,6 +12,70 @@
 create extension if not exists pgcrypto;
 
 -- ------------------------------------------------------------
+-- Password secrets (never exposed via Data API)
+-- ------------------------------------------------------------
+create table if not exists employee_secrets (
+  employee_id text primary key,
+  password_hash text not null,
+  updated_at timestamptz default now()
+);
+
+alter table employee_secrets enable row level security;
+
+drop policy if exists "employee_secrets_deny" on employee_secrets;
+create policy "employee_secrets_deny" on employee_secrets
+for all using (false) with check (false);
+
+-- Keep employees.password writable for app inserts, but clear it after syncing
+alter table employees alter column password drop not null;
+
+insert into employee_secrets (employee_id, password_hash)
+select employee_id, password
+from employees
+where coalesce(password, '') <> ''
+  and password not in ('', 'REDACTED')
+on conflict (employee_id) do update
+set password_hash = excluded.password_hash,
+    updated_at = now();
+
+update employees
+set password = 'REDACTED'
+where coalesce(password, '') <> ''
+  and password <> 'REDACTED';
+
+create or replace function public.sync_employee_secret()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' or tg_op = 'UPDATE' then
+    if new.password is not null
+      and new.password <> ''
+      and new.password <> 'REDACTED'
+    then
+      insert into employee_secrets (employee_id, password_hash, updated_at)
+      values (new.employee_id, new.password, now())
+      on conflict (employee_id) do update
+      set password_hash = excluded.password_hash,
+          updated_at = now();
+
+      new.password := 'REDACTED';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_sync_employee_secret on employees;
+create trigger trg_sync_employee_secret
+before insert or update of password on employees
+for each row
+execute function public.sync_employee_secret();
+
+-- ------------------------------------------------------------
 -- Sessions
 -- ------------------------------------------------------------
 create table if not exists erp_sessions (
@@ -172,6 +236,7 @@ set search_path = public
 as $$
 declare
   emp employees%rowtype;
+  stored_hash text;
   password_ok boolean := false;
   new_token text;
   new_hash text;
@@ -189,15 +254,29 @@ begin
     raise exception 'Invalid Employee ID or Password';
   end if;
 
-  if emp.password like '$2%' then
-    password_ok := (emp.password = crypt(p_password, emp.password));
+  select password_hash into stored_hash
+  from employee_secrets
+  where employee_id = p_employee_id;
+
+  if stored_hash is null and emp.password is not null and emp.password <> 'REDACTED' then
+    stored_hash := emp.password;
+  end if;
+
+  if stored_hash is null then
+    raise exception 'Invalid Employee ID or Password';
+  end if;
+
+  if stored_hash like '$2%' then
+    password_ok := (stored_hash = crypt(p_password, stored_hash));
   else
-    password_ok := (emp.password = p_password);
+    password_ok := (stored_hash = p_password);
     if password_ok then
       new_hash := crypt(p_password, gen_salt('bf', 10));
-      update employees
-      set password = new_hash
-      where id = emp.id;
+      insert into employee_secrets (employee_id, password_hash, updated_at)
+      values (emp.employee_id, new_hash, now())
+      on conflict (employee_id) do update
+      set password_hash = excluded.password_hash,
+          updated_at = now();
     end if;
   end if;
 
@@ -296,6 +375,8 @@ begin
     'inactive'
   );
 
+  -- Trigger stores hash in employee_secrets and redacts employees.password
+
   return json_build_object(
     'employee_id', new_id,
     'status', 'pending'
@@ -357,20 +438,10 @@ drop policy if exists "wallet_tx_all_secure" on wallet_transactions;
 drop policy if exists "erp_sessions_deny" on erp_sessions;
 
 -- ------------------------------------------------------------
--- Hide password hashes from Data API selects
+-- employees (password hashes live in employee_secrets)
 -- ------------------------------------------------------------
-revoke all on table employees from anon, authenticated;
-grant select (
-  id, employee_id, full_name, phone, email, address, department,
-  role, salary, emergency_contact, requested_role, selfie_url, profile_photo,
-  registration_status, approval_status, rejected_reason, status, created_at
-) on table employees to anon, authenticated;
-grant insert, update, delete on table employees to anon, authenticated;
-grant usage, select on sequence employees_id_seq to anon, authenticated;
+revoke all on table employee_secrets from anon, authenticated;
 
--- ------------------------------------------------------------
--- employees
--- ------------------------------------------------------------
 create policy "employees_select" on employees
 for select using (public.is_session_valid());
 
@@ -563,6 +634,7 @@ alter table wallet_transactions enable row level security;
 alter table erp_sessions enable row level security;
 
 -- Grant table privileges used by PostgREST (RLS still applies)
+grant select, insert, update, delete on table employees to anon, authenticated;
 grant select, insert, update, delete on table employee_permissions to anon, authenticated;
 grant select, insert, update, delete on table attendance to anon, authenticated;
 grant select, insert, update, delete on table tasks to anon, authenticated;
