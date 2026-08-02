@@ -32,6 +32,13 @@ import {
   getSessionToken,
   supabase,
 } from "./lib/supabase";
+import {
+  getSnapshot,
+  goBack,
+  navigateTo,
+  resetNavigation,
+  subscribe,
+} from "./lib/navHistory";
 
 export default function App() {
 
@@ -57,13 +64,8 @@ export default function App() {
       ) || ""
     );
 
-  const activeRef = useRef(active);
   const sidebarOpenRef = useRef(sidebarOpen);
   const employeeIdRef = useRef(employeeId);
-
-  useEffect(() => {
-    activeRef.current = active;
-  }, [active]);
 
   useEffect(() => {
     sidebarOpenRef.current = sidebarOpen;
@@ -73,7 +75,20 @@ export default function App() {
     employeeIdRef.current = employeeId;
   }, [employeeId]);
 
-  // Android hardware back: navigate in-app instead of closing the activity
+  // Keep React page state in sync with navigation history
+  useEffect(() => {
+    return subscribe((snapshot) => {
+      setActive(snapshot.current);
+    });
+  }, []);
+
+  const openPage = (page) => {
+    const next = navigateTo(page);
+    setActive(next);
+    setSidebarOpen(false);
+  };
+
+  // Android hardware back: overlay → previous page → exit
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
       return undefined;
@@ -92,8 +107,14 @@ export default function App() {
           return;
         }
 
-        if (activeRef.current !== "dashboard") {
-          setActive("dashboard");
+        const result = goBack();
+
+        if (result === "page") {
+          setActive(getSnapshot().current);
+          return;
+        }
+
+        if (result === "overlay") {
           return;
         }
 
@@ -114,6 +135,8 @@ export default function App() {
       id
     );
 
+    resetNavigation();
+    setActive("dashboard");
     setSessionReady(false);
     setEmployeeId(id);
 
@@ -121,6 +144,8 @@ export default function App() {
 
   const clearSession = () => {
     clearAppSession();
+    resetNavigation();
+    setActive("dashboard");
     setEmployeeId("");
     setEmployee(null);
     setPermissions({});
@@ -272,13 +297,7 @@ export default function App() {
 
           <Sidebar
             active={active}
-            setActive={(value) => {
-
-              setActive(value);
-
-              setSidebarOpen(false);
-
-            }}
+            setActive={openPage}
             permissions={permissions}
             employee={employee}
           />

@@ -4,6 +4,7 @@ import Topbar from "../components/Topbar";
 
 import { supabase } from "../lib/supabase";
 import { hashPassword } from "../lib/password";
+import { pushOverlayCloser } from "../lib/navHistory";
 
 const PERMISSION_KEYS = [
   "dashboard",
@@ -68,10 +69,20 @@ export default function Employees() {
   };
 
   useEffect(() => {
-
     fetchEmployees();
-
   }, []);
+
+  // Android back closes employee details before leaving Employees
+  useEffect(() => {
+    if (!selectedEmployee) {
+      return undefined;
+    }
+
+    return pushOverlayCloser(() => {
+      setSelectedEmployee(null);
+      setPermissions(null);
+    });
+  }, [selectedEmployee]);
 
   // HANDLE CHANGE
   const handleChange = (e) => {
