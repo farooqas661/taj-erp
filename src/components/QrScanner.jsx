@@ -11,7 +11,9 @@ export default function QrScanner({
   const scannerRef = useRef(null);
   const onScanRef = useRef(onScan);
 
-  onScanRef.current = onScan;
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
 
   useEffect(() => {
     let active = true;
