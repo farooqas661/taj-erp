@@ -48,6 +48,7 @@ export default function Permissions() {
     "dashboard",
     "employees",
     "attendance",
+    "tasks",
     "salary",
     "stock",
     "orders",
@@ -92,28 +93,6 @@ export default function Permissions() {
                   </p>
 
                 </div>
-
-                {/* APPROVED */}
-                <button
-                  onClick={() =>
-                    togglePermission(
-                      emp.employee_id,
-                      "approved",
-                      emp.approved
-                    )
-                  }
-                  className={`px-5 py-3 rounded-2xl font-bold transition-all ${
-                    emp.approved
-                      ? "bg-green-500"
-                      : "bg-red-500"
-                  }`}
-                >
-
-                  {emp.approved
-                    ? "Approved"
-                    : "Not Approved"}
-
-                </button>
 
               </div>
 

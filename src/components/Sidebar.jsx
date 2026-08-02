@@ -51,7 +51,7 @@ export default function Sidebar({
       id: "tasks",
       label: "Tasks",
       icon: "📋",
-      permission: "attendance",
+      permission: "tasks",
     },
 
     {
@@ -144,6 +144,13 @@ export default function Sidebar({
 
           if (item.id === "wallet") {
             if (!canAccessWallet) return null;
+          } else if (item.id === "tasks") {
+            if (
+              !(permissions?.tasks ??
+                permissions?.attendance)
+            ) {
+              return null;
+            }
           } else if (
             item.permission &&
             !permissions?.[item.permission]

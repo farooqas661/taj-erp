@@ -4,6 +4,24 @@ import Topbar from "../components/Topbar";
 
 import { supabase } from "../lib/supabase";
 
+const PERMISSION_KEYS = [
+  "dashboard",
+  "employees",
+  "attendance",
+  "tasks",
+  "salary",
+  "stock",
+  "orders",
+  "reports",
+  "settings",
+  "calls",
+  "wallet",
+];
+
+const DEFAULT_PERMISSIONS = Object.fromEntries(
+  PERMISSION_KEYS.map((key) => [key, false])
+);
+
 export default function Employees() {
 
   const [employees, setEmployees] = useState([]);
@@ -103,6 +121,7 @@ export default function Employees() {
             dashboard: true,
             employees: false,
             attendance: true,
+            tasks: false,
             salary: false,
             stock: false,
             orders: false,
@@ -175,7 +194,12 @@ export default function Employees() {
       )
       .single();
 
-    setPermissions(data);
+    setPermissions({
+      ...DEFAULT_PERMISSIONS,
+      dashboard: true,
+      attendance: true,
+      ...data,
+    });
 
   };
 
@@ -576,14 +600,10 @@ export default function Employees() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-              {Object.keys(permissions)
-                .filter(key =>
-                  typeof permissions[key] === "boolean"
-                )
-                .map((key, index) => (
+              {PERMISSION_KEYS.map((key) => (
 
                   <div
-                    key={index}
+                    key={key}
                     className="rounded-2xl border border-white/10 bg-white/5 p-5 flex items-center justify-between"
                   >
 
@@ -613,7 +633,7 @@ export default function Employees() {
 
                   </div>
 
-                ))}
+              ))}
 
             </div>
 

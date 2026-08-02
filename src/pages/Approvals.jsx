@@ -55,6 +55,7 @@ const approveEmployee = async (employee) => {
         dashboard: true,
         employees: false,
         attendance: true,
+        tasks: true,
         salary: false,
         stock: false,
         orders: false,

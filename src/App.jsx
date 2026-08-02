@@ -238,7 +238,8 @@ export default function App() {
 
           {/* TASKS */}
           {active === "tasks" &&
-            permissions.attendance && (
+            (permissions.tasks ??
+              permissions.attendance) && (
               <Tasks />
           )}
 
