@@ -1,6 +1,6 @@
 import Stock from "./pages/Stock";
 import Approvals from "./pages/Approvals";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 import Sidebar from "./components/Sidebar";
 
@@ -19,7 +19,8 @@ import Orders from "./pages/Orders";
 import Reports from "./pages/Reports";
 import Calls from "./pages/Calls";
 import Settings from "./pages/Settings";
-import Wallet from "./pages/Wallet";
+
+const Wallet = lazy(() => import("./pages/Wallet"));
 
 import Login from "./pages/Login";
 
@@ -293,7 +294,9 @@ export default function App() {
               ["admin", "manager", "accountant"].includes(
                 employee?.role?.trim().toLowerCase() || ""
               )) && (
-              <Wallet />
+              <Suspense fallback={null}>
+                <Wallet />
+              </Suspense>
           )}
 
           {/* CALLS */}
