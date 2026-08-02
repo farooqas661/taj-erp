@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { hashPassword } from "../lib/password";
 
 export default function Register({ onBack }) {
 
@@ -71,6 +72,8 @@ export default function Register({ onBack }) {
       }
       const employeeId =
       "PENDING-" + Date.now();
+
+    const hashedPassword = await hashPassword(form.password);
     
     const { error } = await supabase
       .from("employees")
@@ -81,7 +84,7 @@ export default function Register({ onBack }) {
           phone: form.phone,
           email: form.email,
           address: form.address,
-          password: form.password,
+          password: hashedPassword,
           requested_role: form.requested_role,
           selfie_url: selfieUrl,
           registration_status: "pending",
