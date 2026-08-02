@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-import { hashPassword } from "../lib/password";
 
 export default function Register({ onBack }) {
 
@@ -70,38 +69,26 @@ export default function Register({ onBack }) {
         selfieUrl = data.publicUrl;
 
       }
-      const employeeId =
-      "PENDING-" + Date.now();
 
-    const hashedPassword = await hashPassword(form.password);
-    
-    const { error } = await supabase
-      .from("employees")
-      .insert([
-        {
-          employee_id: employeeId,
-          full_name: form.full_name,
-          phone: form.phone,
-          email: form.email,
-          address: form.address,
-          password: hashedPassword,
-          requested_role: form.requested_role,
-          selfie_url: selfieUrl,
-          registration_status: "pending",
-          approval_status: "pending",
-          status: "inactive",
-        },
-      ]);
-    
-    if (error) {
-    
-      alert(error.message);
-    
-      setLoading(false);
-    
-      return;
-    
-    }
+      const { error } = await supabase.rpc("register_employee", {
+        p_full_name: form.full_name,
+        p_phone: form.phone,
+        p_email: form.email,
+        p_address: form.address,
+        p_password: form.password,
+        p_requested_role: form.requested_role,
+        p_selfie_url: selfieUrl,
+      });
+
+      if (error) {
+
+        alert(error.message);
+
+        setLoading(false);
+
+        return;
+
+      }
 
       alert(
         "Registration submitted successfully. Waiting for manager/admin approval."
