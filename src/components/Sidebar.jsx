@@ -1,3 +1,8 @@
+import {
+  clearAppSession,
+  supabase,
+} from "../lib/supabase";
+
 export default function Sidebar({
   active,
   setActive,
@@ -13,14 +18,15 @@ export default function Sidebar({
     ["admin", "manager", "accountant"].includes(role);
 
   // LOGOUT
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.rpc("logout_employee");
+    } catch {
+      // Clear local session even if RPC is unavailable
+    }
 
-    localStorage.removeItem(
-      "employee_id"
-    );
-
+    clearAppSession();
     window.location.reload();
-
   };
 
   // MENU ITEMS
