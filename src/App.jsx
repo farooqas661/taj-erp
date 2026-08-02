@@ -58,6 +58,13 @@ export default function App() {
 
   };
 
+  const clearSession = () => {
+    localStorage.removeItem("employee_id");
+    setEmployeeId("");
+    setEmployee(null);
+    setPermissions({});
+  };
+
   // FETCH EMPLOYEE
   const fetchEmployee = async () => {
 
@@ -66,18 +73,25 @@ export default function App() {
     const { data, error } =
       await supabase
         .from("employees")
-        .select("*")
+        .select(
+          "employee_id, full_name, role, approval_status, profile_photo, salary"
+        )
         .eq(
           "employee_id",
           employeeId
         )
         .single();
 
-    if (!error && data) {
-
-      setEmployee(data);
-
+    if (
+      error ||
+      !data ||
+      data.approval_status !== "approved"
+    ) {
+      clearSession();
+      return;
     }
+
+    setEmployee(data);
 
   };
 

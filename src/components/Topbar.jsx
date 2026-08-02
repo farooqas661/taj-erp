@@ -12,9 +12,11 @@ export default function Topbar({ title }) {
   // FETCH EMPLOYEE
   const fetchEmployee = async () => {
 
+    if (!employeeId) return;
+
     const { data, error } = await supabase
       .from("employees")
-      .select("*")
+      .select("full_name, role, profile_photo")
       .eq("employee_id", employeeId)
       .single();
 
@@ -30,7 +32,7 @@ export default function Topbar({ title }) {
 
     fetchEmployee();
 
-  }, []);
+  }, [employeeId]);
 
   return (
 
