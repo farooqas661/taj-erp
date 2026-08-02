@@ -1,33 +1,210 @@
+import { useEffect, useState } from "react";
+
 import Topbar from "../components/Topbar";
 
-export default function WorkerDashboard() {
+import { supabase } from "../lib/supabase";
 
-  const cards = [
-    {
-      title: "Attendance",
-      value: "26 Days",
-      icon: "🕒",
-      color: "from-green-500 to-green-700",
-    },
-    {
-      title: "Shift",
-      value: "Morning",
-      icon: "🏭",
-      color: "from-orange-500 to-red-600",
-    },
-    {
-      title: "Tasks",
-      value: "8",
-      icon: "📋",
-      color: "from-blue-500 to-cyan-600",
-    },
-    {
-      title: "Salary",
-      value: "₹18K",
-      icon: "💰",
-      color: "from-pink-500 to-red-600",
-    },
-  ];
+const formatSalary = (amount) => {
+  const value = Number(amount) || 0;
+
+  if (value >= 1000) {
+    return "₹" + Math.round(value / 1000) + "K";
+  }
+
+  return "₹" + value;
+};
+
+const countPresentDays = (records, year, month) => {
+  const seen = new Set();
+
+  records.forEach((record) => {
+    const date = new Date(
+      record.check_in || record.created_at
+    );
+
+    if (
+      date.getFullYear() === year &&
+      date.getMonth() + 1 === month
+    ) {
+      seen.add(date.toDateString());
+    }
+  });
+
+  return seen.size;
+};
+
+const isTodayTask = (task, today) => {
+  if (task.status === "completed") return false;
+
+  const todayStr = today.toISOString().slice(0, 10);
+
+  if (task.deadline) {
+    return String(task.deadline).slice(0, 10) === todayStr;
+  }
+
+  if (task.created_at) {
+    return (
+      new Date(task.created_at).toDateString() ===
+      today.toDateString()
+    );
+  }
+
+  return false;
+};
+
+const taskStatusLabel = (status) => {
+  if (status === "completed") return "Completed";
+  if (status === "in_progress") return "Active";
+  return "Pending";
+};
+
+const taskStatusClass = (status) => {
+  if (status === "completed") {
+    return "bg-green-500/20 text-green-300";
+  }
+
+  if (status === "in_progress") {
+    return "bg-green-500/20 text-green-300";
+  }
+
+  return "bg-orange-500/20 text-orange-300";
+};
+
+const defaultCards = [
+  {
+    title: "Attendance",
+    value: "0 Days",
+    icon: "🕒",
+    color: "from-green-500 to-green-700",
+  },
+  {
+    title: "Shift",
+    value: "--",
+    icon: "🏭",
+    color: "from-orange-500 to-red-600",
+  },
+  {
+    title: "Tasks",
+    value: "0",
+    icon: "📋",
+    color: "from-blue-500 to-cyan-600",
+  },
+  {
+    title: "Salary",
+    value: "₹0",
+    icon: "💰",
+    color: "from-pink-500 to-red-600",
+  },
+];
+
+export default function WorkerDashboard() {
+  const employeeId =
+    localStorage.getItem("employee_id");
+
+  const [cards, setCards] = useState(defaultCards);
+  const [tasks, setTasks] = useState([]);
+
+  useEffect(() => {
+    if (!employeeId) return;
+
+    let cancelled = false;
+
+    const loadDashboard = async () => {
+      const current = new Date();
+      const month = current.getMonth() + 1;
+      const year = current.getFullYear();
+
+      const [
+        employeeRes,
+        attendanceRes,
+        tasksRes,
+        settingsRes,
+      ] = await Promise.all([
+        supabase
+          .from("employees")
+          .select("salary")
+          .eq("employee_id", employeeId)
+          .maybeSingle(),
+        supabase
+          .from("attendance")
+          .select("check_in, created_at")
+          .eq("employee_id", employeeId),
+        supabase
+          .from("tasks")
+          .select(
+            "id, title, description, deadline, status, created_at"
+          )
+          .eq("assigned_to", employeeId)
+          .order("id", { ascending: false }),
+        supabase
+          .from("app_settings")
+          .select("shift_start, shift_end")
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      if (cancelled) return;
+
+      const employee = employeeRes.data;
+      const attendance = attendanceRes.data || [];
+      const workerTasks = tasksRes.data || [];
+      const settings = settingsRes.data;
+
+      const presentDays = countPresentDays(
+        attendance,
+        year,
+        month
+      );
+
+      const todayTasks = workerTasks.filter((task) =>
+        isTodayTask(task, current)
+      );
+
+      const openTasks = workerTasks.filter(
+        (task) => task.status !== "completed"
+      );
+
+      const shiftStart =
+        settings?.shift_start?.slice(0, 5) || "08:00";
+      const shiftEnd =
+        settings?.shift_end?.slice(0, 5) || "17:00";
+
+      setCards([
+        {
+          title: "Attendance",
+          value: presentDays + " Days",
+          icon: "🕒",
+          color: "from-green-500 to-green-700",
+        },
+        {
+          title: "Shift",
+          value: shiftStart + " - " + shiftEnd,
+          icon: "🏭",
+          color: "from-orange-500 to-red-600",
+        },
+        {
+          title: "Tasks",
+          value: String(openTasks.length),
+          icon: "📋",
+          color: "from-blue-500 to-cyan-600",
+        },
+        {
+          title: "Salary",
+          value: formatSalary(employee?.salary),
+          icon: "💰",
+          color: "from-pink-500 to-red-600",
+        },
+      ]);
+
+      setTasks(todayTasks.slice(0, 5));
+    };
+
+    void loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId]);
 
   return (
 
@@ -104,45 +281,42 @@ export default function WorkerDashboard() {
 
         <div className="space-y-4">
 
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 flex items-center justify-between">
+          {tasks.length === 0 && (
+            <p className="text-white/40 text-center py-6">
+              No tasks scheduled for today
+            </p>
+          )}
 
-            <div>
+          {tasks.map((task) => (
 
-              <h1 className="font-bold text-lg">
-                Packing Section
-              </h1>
+            <div
+              key={task.id}
+              className="rounded-2xl bg-white/5 border border-white/10 p-5 flex items-center justify-between"
+            >
 
-              <p className="text-white/40 text-sm mt-1">
-                8:00 AM - 12:00 PM
-              </p>
+              <div>
+
+                <h1 className="font-bold text-lg">
+                  {task.title}
+                </h1>
+
+                <p className="text-white/40 text-sm mt-1">
+                  {task.deadline || task.description || "--"}
+                </p>
+
+              </div>
+
+              <div
+                className={`px-4 py-2 rounded-xl text-sm font-bold ${taskStatusClass(
+                  task.status
+                )}`}
+              >
+                {taskStatusLabel(task.status)}
+              </div>
 
             </div>
 
-            <div className="px-4 py-2 rounded-xl bg-green-500/20 text-green-300 text-sm font-bold">
-              Active
-            </div>
-
-          </div>
-
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 flex items-center justify-between">
-
-            <div>
-
-              <h1 className="font-bold text-lg">
-                Inventory Check
-              </h1>
-
-              <p className="text-white/40 text-sm mt-1">
-                1:00 PM - 3:00 PM
-              </p>
-
-            </div>
-
-            <div className="px-4 py-2 rounded-xl bg-orange-500/20 text-orange-300 text-sm font-bold">
-              Pending
-            </div>
-
-          </div>
+          ))}
 
         </div>
 
