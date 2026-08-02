@@ -1,6 +1,11 @@
 import { useState } from "react";
 import Register from "./Register";
 import { supabase } from "../lib/supabase";
+import {
+  hashPassword,
+  isHashedPassword,
+  verifyPassword,
+} from "../lib/password";
 
 export default function Login({ onLogin }) {
   const [employeeId, setEmployeeId] = useState("");
@@ -20,15 +25,36 @@ export default function Login({ onLogin }) {
       .from("employees")
       .select("employee_id, approval_status, password")
       .eq("employee_id", employeeId)
-      .eq("password", password)
       .single();
 
-    setLoading(false);
-
     if (error || !data) {
+      setLoading(false);
       alert("Invalid Employee ID or Password");
       return;
     }
+
+    const passwordMatches = await verifyPassword(
+      password,
+      data.password
+    );
+
+    if (!passwordMatches) {
+      setLoading(false);
+      alert("Invalid Employee ID or Password");
+      return;
+    }
+
+    // Upgrade leftover plain-text passwords after a successful login
+    if (!isHashedPassword(data.password)) {
+      const hashed = await hashPassword(password);
+
+      await supabase
+        .from("employees")
+        .update({ password: hashed })
+        .eq("employee_id", data.employee_id);
+    }
+
+    setLoading(false);
 
     if (data.approval_status !== "approved") {
       alert("Account waiting for admin approval");
