@@ -199,11 +199,11 @@ export default function Sidebar({
       </div>
 
       {/* FOOTER */}
-      <div className="mt-6">
+      <div className="mt-6 shrink-0">
 
         <button
           onClick={handleLogout}
-          className="w-full py-5 rounded-[25px] bg-gradient-to-r from-red-600 to-orange-500 text-2xl font-black"
+          className="w-full min-h-[48px] py-5 rounded-[25px] bg-gradient-to-r from-red-600 to-orange-500 text-2xl font-black"
         >
           Logout
         </button>
