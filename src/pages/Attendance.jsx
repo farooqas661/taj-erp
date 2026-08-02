@@ -171,7 +171,7 @@ export default function Attendance() {
       // location optional for check-in
     }
 
-    await supabase
+    const { error } = await supabase
       .from("attendance")
       .insert([
         {
@@ -185,6 +185,11 @@ export default function Attendance() {
       ]);
 
     setLoading(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
     fetchAttendance();
 
@@ -201,7 +206,7 @@ export default function Attendance() {
 
     const latest = attendance[0];
 
-    await supabase
+    const { error } = await supabase
       .from("attendance")
       .update({
         check_out: new Date(),
@@ -209,6 +214,11 @@ export default function Attendance() {
       .eq("id", latest.id);
 
     setLoading(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
     fetchAttendance();
 
