@@ -237,7 +237,7 @@ export default function Wallet() {
       return;
     }
 
-    await supabase
+    const { error: txError } = await supabase
       .from("wallet_transactions")
       .insert([
         {
@@ -249,6 +249,17 @@ export default function Wallet() {
           created_by: employeeId,
         },
       ]);
+
+    if (txError) {
+      setSaving(false);
+      alert(
+        "Balance updated, but ledger write failed: " +
+          txError.message
+      );
+      await fetchWallets();
+      await fetchTransactions();
+      return;
+    }
 
     setSaving(false);
     alert("Points added to wallet");
@@ -434,7 +445,7 @@ export default function Wallet() {
       return;
     }
 
-    await supabase
+    const { error: txError } = await supabase
       .from("wallet_transactions")
       .insert([
         {
@@ -449,6 +460,16 @@ export default function Wallet() {
           created_by: employeeId,
         },
       ]);
+
+    if (txError) {
+      setSaving(false);
+      alert(
+        "Balances updated, but ledger write failed: " +
+          txError.message
+      );
+      await loadData();
+      return;
+    }
 
     setSaving(false);
     alert("Payment successful");
@@ -493,7 +514,7 @@ export default function Wallet() {
     const newSettled =
       Number(shop.total_settled || 0) + amount;
 
-    await supabase
+    const { error: shopError } = await supabase
       .from("shopkeepers")
       .update({
         balance: newBalance,
@@ -501,7 +522,13 @@ export default function Wallet() {
       })
       .eq("id", shop.id);
 
-    await supabase
+    if (shopError) {
+      setSaving(false);
+      alert(shopError.message);
+      return;
+    }
+
+    const { error: txError } = await supabase
       .from("wallet_transactions")
       .insert([
         {
@@ -513,6 +540,16 @@ export default function Wallet() {
           created_by: employeeId,
         },
       ]);
+
+    if (txError) {
+      setSaving(false);
+      alert(
+        "Settlement balance updated, but ledger write failed: " +
+          txError.message
+      );
+      await loadData();
+      return;
+    }
 
     setSaving(false);
     alert("Settlement recorded");
