@@ -5,6 +5,7 @@ import Topbar from "../components/Topbar";
 import QrScanner from "../components/QrScanner";
 
 import { supabase } from "../lib/supabase";
+import { hashPassword } from "../lib/password";
 
 const formatPoints = (amount) => {
   const value = Number(amount) || 0;
@@ -279,6 +280,8 @@ export default function Wallet() {
 
     const qrToken = makeQrToken(shopkeeperCode);
 
+    const hashedPassword = await hashPassword(shopForm.password);
+
     const { error: empError } = await supabase
       .from("employees")
       .insert([
@@ -288,7 +291,7 @@ export default function Wallet() {
             shopForm.owner_name ||
             shopForm.shop_name,
           phone: shopForm.phone,
-          password: shopForm.password,
+          password: hashedPassword,
           role: "shopkeeper",
           department: "Shop",
           approval_status: "approved",
