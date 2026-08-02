@@ -7,7 +7,8 @@
 --   - Avoids '$2%' inside dollar-quotes (Postgres treats $2 as a quote tag)
 -- ============================================================
 
-create extension if not exists pgcrypto;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ------------------------------------------------------------
 -- Password secrets (never exposed via Data API)
@@ -235,7 +236,7 @@ create or replace function public.login_employee(
 returns json
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $fn$
 declare
   emp employees%rowtype;
@@ -342,7 +343,7 @@ create or replace function public.register_employee(
 returns json
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $fn$
 declare
   new_id text;
