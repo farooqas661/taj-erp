@@ -368,7 +368,7 @@ export default function Orders() {
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mt-6">
         <div className="rounded-[30px] border border-white/10 bg-white/5 p-5">
           <p className="text-white/50 text-sm">
             Total Orders
