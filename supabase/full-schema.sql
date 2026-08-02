@@ -291,6 +291,7 @@ insert into app_settings (
 
 -- ============================================================
 -- FIRST ADMIN USER (login: EMP001 / password: admin123)
+-- Password stored as bcrypt hash of "admin123"
 -- Change the password after first login!
 -- ============================================================
 
@@ -312,7 +313,7 @@ insert into employees (
   '9999999999',
   'admin@tajerp.com',
   'Management',
-  'admin123',
+  '$2b$10$M8aMtlOjK7PzeRHQXpJcYuRiThqQnayJygu.rVeio4PM65OD1PLeC',
   'admin',
   50000,
   'approved',
