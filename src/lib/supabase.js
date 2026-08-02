@@ -9,7 +9,39 @@ if (!supabaseUrl || !supabaseKey) {
   );
 }
 
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseKey
-);
+export const SESSION_TOKEN_KEY = "erp_session_token";
+export const EMPLOYEE_ID_KEY = "employee_id";
+
+export const getSessionToken = () =>
+  localStorage.getItem(SESSION_TOKEN_KEY) || "";
+
+export const setSessionToken = (token) => {
+  if (token) {
+    localStorage.setItem(SESSION_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+  }
+};
+
+export const clearAppSession = () => {
+  localStorage.removeItem(SESSION_TOKEN_KEY);
+  localStorage.removeItem(EMPLOYEE_ID_KEY);
+};
+
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  global: {
+    fetch: (url, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      const token = getSessionToken();
+
+      if (token) {
+        headers.set("x-erp-token", token);
+      }
+
+      return fetch(url, {
+        ...options,
+        headers,
+      });
+    },
+  },
+});
