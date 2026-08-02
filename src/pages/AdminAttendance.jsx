@@ -4,6 +4,18 @@ import Topbar from "../components/Topbar";
 
 import { supabase } from "../lib/supabase";
 
+const countActiveWorkers = (records) => {
+  const activeIds = new Set();
+
+  records.forEach((item) => {
+    if (!item.check_out && item.employee_id) {
+      activeIds.add(item.employee_id);
+    }
+  });
+
+  return activeIds.size;
+};
+
 export default function AdminAttendance() {
 
   const [attendance, setAttendance] = useState([]);
@@ -39,14 +51,13 @@ export default function AdminAttendance() {
   }, []);
 
   // TOTALS
-  const totalEmployees = attendance.length;
+  const totalRecords = attendance.length;
 
   const checkedOut = attendance.filter(
     item => item.check_out
   ).length;
 
-  const activeNow =
-    totalEmployees - checkedOut;
+  const activeNow = countActiveWorkers(attendance);
 
   return (
 
@@ -70,7 +81,7 @@ export default function AdminAttendance() {
             </p>
 
             <h1 className="text-5xl font-black mt-4">
-              {totalEmployees}
+              {totalRecords}
             </h1>
 
           </div>

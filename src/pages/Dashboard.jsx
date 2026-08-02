@@ -4,6 +4,18 @@ import Topbar from "../components/Topbar";
 
 import { supabase } from "../lib/supabase";
 
+const countActiveWorkers = (records) => {
+  const activeIds = new Set();
+
+  records.forEach((item) => {
+    if (!item.check_out && item.employee_id) {
+      activeIds.add(item.employee_id);
+    }
+  });
+
+  return activeIds.size;
+};
+
 export default function Dashboard() {
 
   const [employeeCount, setEmployeeCount] =
@@ -54,11 +66,9 @@ export default function Dashboard() {
       );
 
       const active =
-        attendance.filter(
-          item => !item.check_out
-        );
+        countActiveWorkers(attendance);
 
-      setActiveWorkers(active.length);
+      setActiveWorkers(active);
 
     }
 
