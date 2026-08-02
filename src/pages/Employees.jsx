@@ -117,7 +117,7 @@ export default function Employees() {
     if (!error) {
 
       // DEFAULT PERMISSIONS
-      await supabase
+      const { error: permError } = await supabase
         .from("employee_permissions")
         .insert([
           {
@@ -136,7 +136,14 @@ export default function Employees() {
           },
         ]);
 
-      alert("Employee Added");
+      if (permError) {
+        alert(
+          "Employee created, but permissions failed: " +
+            permError.message
+        );
+      } else {
+        alert("Employee Added");
+      }
 
       setForm({
         employee_id: "",
@@ -170,15 +177,27 @@ export default function Employees() {
 
     if (!confirmDelete) return;
 
-    await supabase
+    const { error: empError } = await supabase
       .from("employees")
       .delete()
       .eq("employee_id", employeeId);
 
-    await supabase
+    if (empError) {
+      alert(empError.message);
+      return;
+    }
+
+    const { error: permError } = await supabase
       .from("employee_permissions")
       .delete()
       .eq("employee_id", employeeId);
+
+    if (permError) {
+      alert(
+        "Employee deleted, but permissions cleanup failed: " +
+          permError.message
+      );
+    }
 
     fetchEmployees();
 
