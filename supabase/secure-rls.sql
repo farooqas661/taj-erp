@@ -1,12 +1,10 @@
 -- ============================================================
--- TAJ ERP — Secure RLS Policies
--- Run in Supabase → SQL Editor AFTER/WITH the updated app code.
+-- TAJ ERP — Secure RLS Policies (corrected)
+-- Run in Supabase → SQL Editor
 --
--- Model:
---   1) login_employee() verifies password and issues a session token
---   2) App sends token as header: x-erp-token
---   3) RLS allows access only for valid sessions + role/permissions
---   4) Password hashes are never readable via the Data API
+-- Fix notes:
+--   - All function bodies use $fn$ ... $fn$ (not $$)
+--   - Avoids '$2%' inside dollar-quotes (Postgres treats $2 as a quote tag)
 -- ============================================================
 
 create extension if not exists pgcrypto;
@@ -26,7 +24,6 @@ drop policy if exists "employee_secrets_deny" on employee_secrets;
 create policy "employee_secrets_deny" on employee_secrets
 for all using (false) with check (false);
 
--- Keep employees.password writable for app inserts, but clear it after syncing
 alter table employees alter column password drop not null;
 
 insert into employee_secrets (employee_id, password_hash)
@@ -48,7 +45,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $fn$
 begin
   if tg_op = 'INSERT' or tg_op = 'UPDATE' then
     if new.password is not null
@@ -67,7 +64,7 @@ begin
 
   return new;
 end;
-$$;
+$fn$;
 
 drop trigger if exists trg_sync_employee_secret on employees;
 create trigger trg_sync_employee_secret
@@ -86,19 +83,19 @@ create table if not exists erp_sessions (
   created_at timestamptz default now()
 );
 
-create index if not exists erp_sessions_token_idx on erp_sessions(token);
-create index if not exists erp_sessions_employee_idx on erp_sessions(employee_id);
+create index if not exists erp_sessions_token_idx on erp_sessions (token);
+create index if not exists erp_sessions_employee_idx on erp_sessions (employee_id);
 
 alter table erp_sessions enable row level security;
 
 -- ------------------------------------------------------------
--- Helper: read session token from request headers
+-- Helpers
 -- ------------------------------------------------------------
 create or replace function public.request_erp_token()
 returns text
 language plpgsql
 stable
-as $$
+as $fn$
 declare
   headers json;
   token text;
@@ -120,7 +117,7 @@ begin
 
   return nullif(token, '');
 end;
-$$;
+$fn$;
 
 create or replace function public.current_employee_id()
 returns text
@@ -128,13 +125,13 @@ language sql
 stable
 security definer
 set search_path = public
-as $$
+as $fn$
   select s.employee_id
   from erp_sessions s
   where s.token = public.request_erp_token()
     and s.expires_at > now()
   limit 1;
-$$;
+$fn$;
 
 create or replace function public.current_employee_role()
 returns text
@@ -142,12 +139,12 @@ language sql
 stable
 security definer
 set search_path = public
-as $$
+as $fn$
   select lower(trim(e.role))
   from employees e
   where e.employee_id = public.current_employee_id()
   limit 1;
-$$;
+$fn$;
 
 create or replace function public.is_session_valid()
 returns boolean
@@ -155,9 +152,9 @@ language sql
 stable
 security definer
 set search_path = public
-as $$
+as $fn$
   select public.current_employee_id() is not null;
-$$;
+$fn$;
 
 create or replace function public.is_non_worker()
 returns boolean
@@ -165,9 +162,17 @@ language sql
 stable
 security definer
 set search_path = public
-as $$
+as $fn$
   select coalesce(public.current_employee_role(), 'worker') <> 'worker';
-$$;
+$fn$;
+
+create or replace function public.is_bcrypt_hash(p_value text)
+returns boolean
+language sql
+immutable
+as $fn$
+  select p_value ~ '^\$2[aby]\$';
+$fn$;
 
 create or replace function public.has_app_permission(p_module text)
 returns boolean
@@ -175,7 +180,7 @@ language plpgsql
 stable
 security definer
 set search_path = public
-as $$
+as $fn$
 declare
   eid text := public.current_employee_id();
   r text;
@@ -200,12 +205,10 @@ begin
     return true;
   end if;
 
-  -- Match app wallet role bypass
   if p_module = 'wallet' and r in ('manager', 'accountant', 'shopkeeper') then
     return true;
   end if;
 
-  -- Tasks fallback used by the app (tasks ?? attendance)
   if p_module = 'tasks' then
     select coalesce(p.tasks, p.attendance, false) into allowed
     from employee_permissions p
@@ -220,10 +223,10 @@ begin
 
   return coalesce(allowed, false);
 end;
-$$;
+$fn$;
 
 -- ------------------------------------------------------------
--- Auth RPCs (SECURITY DEFINER)
+-- Auth RPCs
 -- ------------------------------------------------------------
 create or replace function public.login_employee(
   p_employee_id text,
@@ -233,7 +236,7 @@ returns json
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $fn$
 declare
   emp employees%rowtype;
   stored_hash text;
@@ -258,7 +261,10 @@ begin
   from employee_secrets
   where employee_id = p_employee_id;
 
-  if stored_hash is null and emp.password is not null and emp.password <> 'REDACTED' then
+  if stored_hash is null
+    and emp.password is not null
+    and emp.password <> 'REDACTED'
+  then
     stored_hash := emp.password;
   end if;
 
@@ -266,7 +272,7 @@ begin
     raise exception 'Invalid Employee ID or Password';
   end if;
 
-  if stored_hash like '$2%' then
+  if public.is_bcrypt_hash(stored_hash) then
     password_ok := (stored_hash = crypt(p_password, stored_hash));
   else
     password_ok := (stored_hash = p_password);
@@ -309,20 +315,20 @@ begin
     'full_name', emp.full_name
   );
 end;
-$$;
+$fn$;
 
 create or replace function public.logout_employee()
 returns boolean
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $fn$
 begin
   delete from erp_sessions
   where token = public.request_erp_token();
   return true;
 end;
-$$;
+$fn$;
 
 create or replace function public.register_employee(
   p_full_name text,
@@ -337,7 +343,7 @@ returns json
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $fn$
 declare
   new_id text;
   hashed text;
@@ -375,14 +381,12 @@ begin
     'inactive'
   );
 
-  -- Trigger stores hash in employee_secrets and redacts employees.password
-
   return json_build_object(
     'employee_id', new_id,
     'status', 'pending'
   );
 end;
-$$;
+$fn$;
 
 grant execute on function public.login_employee(text, text) to anon, authenticated;
 grant execute on function public.logout_employee() to anon, authenticated;
@@ -392,7 +396,7 @@ grant execute on function public.has_app_permission(text) to anon, authenticated
 grant execute on function public.is_session_valid() to anon, authenticated;
 
 -- ------------------------------------------------------------
--- Drop old open policies
+-- Drop old policies
 -- ------------------------------------------------------------
 drop policy if exists "employees_all" on employees;
 drop policy if exists "employee_permissions_all" on employee_permissions;
@@ -422,9 +426,11 @@ drop policy if exists "tasks_insert" on tasks;
 drop policy if exists "tasks_update" on tasks;
 drop policy if exists "tasks_delete" on tasks;
 drop policy if exists "stock_all_secure" on stock;
+drop policy if exists "stock_reports_read" on stock;
 drop policy if exists "salary_select" on salary_payments;
 drop policy if exists "salary_write" on salary_payments;
 drop policy if exists "orders_all_secure" on orders;
+drop policy if exists "orders_reports_read" on orders;
 drop policy if exists "settings_select" on app_settings;
 drop policy if exists "settings_write" on app_settings;
 drop policy if exists "calls_select" on calls;
@@ -436,12 +442,31 @@ drop policy if exists "wallets_all_secure" on wallets;
 drop policy if exists "shopkeepers_all_secure" on shopkeepers;
 drop policy if exists "wallet_tx_all_secure" on wallet_transactions;
 drop policy if exists "erp_sessions_deny" on erp_sessions;
+drop policy if exists "tasks_reports_read" on tasks;
 
 -- ------------------------------------------------------------
--- employees (password hashes live in employee_secrets)
+-- Enable RLS
 -- ------------------------------------------------------------
+alter table employees enable row level security;
+alter table employee_permissions enable row level security;
+alter table attendance enable row level security;
+alter table tasks enable row level security;
+alter table stock enable row level security;
+alter table salary_payments enable row level security;
+alter table orders enable row level security;
+alter table app_settings enable row level security;
+alter table calls enable row level security;
+alter table wallets enable row level security;
+alter table shopkeepers enable row level security;
+alter table wallet_transactions enable row level security;
+alter table erp_sessions enable row level security;
+alter table employee_secrets enable row level security;
+
 revoke all on table employee_secrets from anon, authenticated;
 
+-- ------------------------------------------------------------
+-- employees
+-- ------------------------------------------------------------
 create policy "employees_select" on employees
 for select using (public.is_session_valid());
 
@@ -524,12 +549,18 @@ for delete using (
   or public.is_non_worker()
 );
 
+create policy "tasks_reports_read" on tasks
+for select using (public.has_app_permission('reports'));
+
 -- ------------------------------------------------------------
--- stock / orders / calls / reports-backed tables
+-- stock / orders
 -- ------------------------------------------------------------
 create policy "stock_all_secure" on stock
 for all using (public.has_app_permission('stock'))
 with check (public.has_app_permission('stock'));
+
+create policy "stock_reports_read" on stock
+for select using (public.has_app_permission('reports'));
 
 create policy "orders_all_secure" on orders
 for all using (
@@ -538,6 +569,12 @@ for all using (
 )
 with check (public.has_app_permission('orders'));
 
+create policy "orders_reports_read" on orders
+for select using (public.has_app_permission('reports'));
+
+-- ------------------------------------------------------------
+-- calls
+-- ------------------------------------------------------------
 create policy "calls_select" on calls
 for select using (
   public.has_app_permission('calls')
@@ -613,27 +650,13 @@ with check (
   or created_by = public.current_employee_id()
 );
 
--- Sessions table: no direct client access
 create policy "erp_sessions_deny" on erp_sessions
 for all using (false)
 with check (false);
 
--- Ensure RLS is enabled everywhere
-alter table employees enable row level security;
-alter table employee_permissions enable row level security;
-alter table attendance enable row level security;
-alter table tasks enable row level security;
-alter table stock enable row level security;
-alter table salary_payments enable row level security;
-alter table orders enable row level security;
-alter table app_settings enable row level security;
-alter table calls enable row level security;
-alter table wallets enable row level security;
-alter table shopkeepers enable row level security;
-alter table wallet_transactions enable row level security;
-alter table erp_sessions enable row level security;
-
--- Grant table privileges used by PostgREST (RLS still applies)
+-- ------------------------------------------------------------
+-- Grants (RLS still applies)
+-- ------------------------------------------------------------
 grant select, insert, update, delete on table employees to anon, authenticated;
 grant select, insert, update, delete on table employee_permissions to anon, authenticated;
 grant select, insert, update, delete on table attendance to anon, authenticated;
@@ -649,25 +672,7 @@ grant select, insert, update, delete on table wallet_transactions to anon, authe
 
 grant usage, select on all sequences in schema public to anon, authenticated;
 
--- ------------------------------------------------------------
--- Reports needs broad reads for permitted users
--- ------------------------------------------------------------
-drop policy if exists "stock_reports_read" on stock;
-drop policy if exists "orders_reports_read" on orders;
-drop policy if exists "tasks_reports_read" on tasks;
-
-create policy "stock_reports_read" on stock
-for select using (public.has_app_permission('reports'));
-
-create policy "orders_reports_read" on orders
-for select using (public.has_app_permission('reports'));
-
-create policy "tasks_reports_read" on tasks
-for select using (public.has_app_permission('reports'));
-
 -- ============================================================
 -- DONE
--- After running this SQL, deploy the updated app that:
---   - calls login_employee / register_employee RPCs
---   - sends x-erp-token on every request
+-- Log out, clear site data once, then log in again.
 -- ============================================================
