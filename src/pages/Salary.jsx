@@ -4,7 +4,7 @@ import Topbar from "../components/Topbar";
 
 import { supabase } from "../lib/supabase";
 
-const WORKING_DAYS = 26;
+const DEFAULT_WORKING_DAYS = 26;
 
 const MONTHS = [
   "January",
@@ -61,10 +61,11 @@ const calculateNetSalary = (
   baseSalary,
   presentDays,
   deductions = 0,
-  bonus = 0
+  bonus = 0,
+  workingDays = DEFAULT_WORKING_DAYS
 ) => {
   const daily =
-    Number(baseSalary || 0) / WORKING_DAYS;
+    Number(baseSalary || 0) / workingDays;
 
   const earned = daily * presentDays;
 
@@ -88,6 +89,9 @@ export default function Salary() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [paymentsError, setPaymentsError] = useState("");
+  const [workingDays, setWorkingDays] = useState(
+    DEFAULT_WORKING_DAYS
+  );
 
   const [month, setMonth] = useState(
     now.getMonth() + 1
@@ -177,6 +181,18 @@ export default function Salary() {
     setPaymentHistory(data || []);
   };
 
+  const fetchSettings = async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("working_days")
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.working_days) {
+      setWorkingDays(Number(data.working_days));
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
 
@@ -186,6 +202,7 @@ export default function Salary() {
       fetchAttendance(),
       fetchPayments(),
       fetchPaymentHistory(),
+      fetchSettings(),
     ]);
 
     setLoading(false);
@@ -226,7 +243,8 @@ export default function Salary() {
           baseSalary,
           presentDays,
           deductions,
-          bonus
+          bonus,
+          workingDays
         );
 
     return {
@@ -294,7 +312,8 @@ export default function Salary() {
       selectedPayroll.baseSalary,
       selectedPayroll.presentDays,
       payForm.deductions,
-      payForm.bonus
+      payForm.bonus,
+      workingDays
     );
 
     const payload = {
@@ -374,7 +393,7 @@ export default function Salary() {
             </h1>
             <p className="mt-2 text-white/50">
               Monthly salary based on attendance (
-              {WORKING_DAYS} working days)
+              {workingDays} working days)
             </p>
           </div>
 
@@ -529,7 +548,7 @@ export default function Salary() {
                     </p>
                     <p className="text-xl font-bold mt-1">
                       {row.presentDays} /{" "}
-                      {WORKING_DAYS}
+                      {workingDays}
                     </p>
                   </div>
 
@@ -708,7 +727,7 @@ export default function Salary() {
                 <span className="font-bold">
                   {formatCurrency(
                     selectedPayroll.baseSalary /
-                      WORKING_DAYS
+                      workingDays
                   )}
                 </span>
               </div>
@@ -766,7 +785,8 @@ export default function Salary() {
                     selectedPayroll.baseSalary,
                     selectedPayroll.presentDays,
                     payForm.deductions,
-                    payForm.bonus
+                    payForm.bonus,
+                    workingDays
                   )
                 )}
               </span>
