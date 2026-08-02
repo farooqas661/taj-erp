@@ -135,7 +135,7 @@ export default function Tasks() {
 
     setLoading(true);
 
-    await supabase
+    const { error } = await supabase
       .from("tasks")
       .insert([
         {
@@ -145,6 +145,11 @@ export default function Tasks() {
       ]);
 
     setLoading(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
     alert("Task Created");
 
@@ -166,12 +171,17 @@ export default function Tasks() {
     status
   ) => {
 
-    await supabase
+    const { error } = await supabase
       .from("tasks")
       .update({
         status,
       })
       .eq("id", taskId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
     fetchTasks();
 
