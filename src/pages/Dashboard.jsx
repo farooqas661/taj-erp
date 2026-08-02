@@ -37,13 +37,13 @@ export default function Dashboard() {
     const { data: employees } =
       await supabase
         .from("employees")
-        .select("*");
+        .select("role");
 
     // ATTENDANCE
     const { data: attendance } =
       await supabase
         .from("attendance")
-        .select("*");
+        .select("employee_id, check_out");
 
     if (employees) {
 
