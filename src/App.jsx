@@ -27,6 +27,7 @@ import Login from "./pages/Login";
 import {
   clearAppSession,
   EMPLOYEE_ID_KEY,
+  getSessionToken,
   supabase,
 } from "./lib/supabase";
 
@@ -44,6 +45,9 @@ export default function App() {
   const [employee, setEmployee] =
     useState(null);
 
+  const [sessionReady, setSessionReady] =
+    useState(false);
+
   const [employeeId, setEmployeeId] =
     useState(
       localStorage.getItem(
@@ -59,6 +63,7 @@ export default function App() {
       id
     );
 
+    setSessionReady(false);
     setEmployeeId(id);
 
   };
@@ -68,12 +73,21 @@ export default function App() {
     setEmployeeId("");
     setEmployee(null);
     setPermissions({});
+    setSessionReady(false);
   };
 
   // FETCH EMPLOYEE
   const fetchEmployee = async () => {
 
-    if (!employeeId) return;
+    if (!employeeId) {
+      setSessionReady(false);
+      return;
+    }
+
+    if (!getSessionToken()) {
+      clearSession();
+      return;
+    }
 
     const { data, error } =
       await supabase
@@ -97,13 +111,14 @@ export default function App() {
     }
 
     setEmployee(data);
+    setSessionReady(true);
 
   };
 
   // FETCH PERMISSIONS
   const fetchPermissions = async () => {
 
-    if (!employeeId) return;
+    if (!employeeId || !getSessionToken()) return;
 
     const { data, error } =
       await supabase
@@ -115,29 +130,55 @@ export default function App() {
         )
         .single();
 
-    if (!error && data) {
+    if (error) {
+      // No permissions row yet — stay logged in with empty access
+      if (error.code === "PGRST116") {
+        setPermissions({});
+        return;
+      }
 
+      clearSession();
+      return;
+    }
+
+    if (data) {
       setPermissions(data);
-
     }
 
   };
 
   useEffect(() => {
 
-    fetchEmployee();
+    if (!employeeId) {
+      setSessionReady(false);
+      return;
+    }
 
+    if (!getSessionToken()) {
+      clearSession();
+      return;
+    }
+
+    fetchEmployee();
     fetchPermissions();
 
   }, [employeeId]);
 
-  // NOT LOGGED IN
-  if (!employeeId) {
+  // NOT LOGGED IN — require both employee id and session token
+  if (!employeeId || !getSessionToken()) {
 
     return (
       <Login onLogin={handleLogin} />
     );
 
+  }
+
+  if (!sessionReady || !employee) {
+    return (
+      <div className="min-h-screen bg-[#050507] text-white flex items-center justify-center">
+        <p className="text-white/50 text-lg">Loading session...</p>
+      </div>
+    );
   }
 
   return (
