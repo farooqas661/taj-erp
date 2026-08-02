@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Topbar from "../components/Topbar";
 
 import { supabase } from "../lib/supabase";
+import { hashPassword } from "../lib/password";
 
 const PERMISSION_KEYS = [
   "dashboard",
@@ -99,12 +100,15 @@ export default function Employees() {
 
     setLoading(true);
 
+    const hashedPassword = await hashPassword(form.password);
+
     // INSERT EMPLOYEE
     const { error } = await supabase
       .from("employees")
       .insert([
         {
           ...form,
+          password: hashedPassword,
           approval_status: "approved",
           status: "active",
         },
