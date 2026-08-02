@@ -24,7 +24,11 @@ const Wallet = lazy(() => import("./pages/Wallet"));
 
 import Login from "./pages/Login";
 
-import { supabase } from "./lib/supabase";
+import {
+  clearAppSession,
+  EMPLOYEE_ID_KEY,
+  supabase,
+} from "./lib/supabase";
 
 export default function App() {
 
@@ -43,7 +47,7 @@ export default function App() {
   const [employeeId, setEmployeeId] =
     useState(
       localStorage.getItem(
-        "employee_id"
+        EMPLOYEE_ID_KEY
       ) || ""
     );
 
@@ -51,7 +55,7 @@ export default function App() {
   const handleLogin = (id) => {
 
     localStorage.setItem(
-      "employee_id",
+      EMPLOYEE_ID_KEY,
       id
     );
 
@@ -60,7 +64,7 @@ export default function App() {
   };
 
   const clearSession = () => {
-    localStorage.removeItem("employee_id");
+    clearAppSession();
     setEmployeeId("");
     setEmployee(null);
     setPermissions({});
